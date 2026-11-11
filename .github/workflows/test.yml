@@ -1,0 +1,24 @@
+name: Test
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+      - run: |
+          python setup_env.py
+          docker compose up --build --wait --wait-timeout 180
+          task=$(docker compose exec -T api python - < tests/mysql_smoke.py)
+          id=$(printf '%s' "$task" | python -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+          docker compose up -d --no-deps --force-recreate --wait db
+          curl --fail --retry 8 --retry-all-errors "http://127.0.0.1:18016/tasks/$id" > actual.json
+          TASK="$task" python -c 'import json,os; assert json.load(open("actual.json")) == json.loads(os.environ["TASK"])'
+      - if: always()
+        run: docker compose down -v

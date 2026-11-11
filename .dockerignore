@@ -1,0 +1,5 @@
+**
+!requirements.txt
+!task_service/
+!task_service/*.py
+task_service/__pycache__/

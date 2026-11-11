@@ -1,0 +1,40 @@
+services:
+  db:
+    image: mysql:8.4
+    command: ["--require-secure-transport=ON"]
+    environment:
+      MYSQL_DATABASE: task_service
+      MYSQL_USER: task_app
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Run python setup_env.py}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Run python setup_env.py}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    networks: [database]
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql --protocol=TCP -h127.0.0.1 -u task_app task_service -e 'SELECT id FROM practice_events LIMIT 0'"]
+      interval: 3s
+      timeout: 5s
+      retries: 25
+      start_period: 20s
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Run python setup_env.py}
+    ports:
+      - "127.0.0.1:18016:8000"
+    networks: [frontend, database]
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import Request, urlopen; urlopen(Request('http://127.0.0.1:8000/ready', headers={'Host': '127.0.0.1:18016'}), timeout=3).close()"]
+      interval: 3s
+      timeout: 5s
+      retries: 15
+volumes:
+  db_data:
+networks:
+  frontend:
+  database:
+    internal: true
