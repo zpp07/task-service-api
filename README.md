@@ -2,6 +2,18 @@
 
 一个用 FastAPI 和 MySQL 实现的任务与事件 API，从已在腾讯云 Ubuntu 上验证过的后端课程实验整理而来。核心示例是把任务和创建事件写入同一事务，再用事件 ID 游标读取事件。
 
+从空数据库启动后的真实演示结果如下。随后重建 MySQL 容器，对同一任务执行 GET，返回结果一致。约束失败的回滚也通过了独立连接验证。[GitHub Actions 验证记录](https://github.com/zpp07/task-service-api/actions/runs/42947959602)
+
+```json
+{
+  "id": 1,
+  "run_key": "b815afde-2737-4d1b-af21-16890128c652",
+  "title": "Example task: ' OR 1=1 --",
+  "status": "pending",
+  "event_count": 1
+}
+```
+
 ```mermaid
 flowchart LR
   A[Swagger UI / HTTP client] --> B[FastAPI routes and validation]
